@@ -37,12 +37,12 @@ Use Meta’s WhatsApp Cloud API to proactively message up to **1000 users/day**.
 1. Send an SMS to the **Twilio service number** in this format:
 
     ```
-    <whatsapp_number> | <message>
+    <whatsapp_number> | <template_name>
     ```
 
 2. Azure Logic App parses the message.
 
-3. Meta API sends a WhatsApp message to the number.
+3. Meta API sends a WhatsApp message to the number using the specified approved template.
 
 4. If they reply, 3CX receives it via its existing integration.
 
@@ -50,8 +50,8 @@ Use Meta’s WhatsApp Cloud API to proactively message up to **1000 users/day**.
 
 ## 📋 Prerequisites
 
-- Verified WhatsApp Business Account
-- Approved WhatsApp template  
+- Verified WhatsApp Business Account  
+- Approved WhatsApp templates (e.g. `welcome_offer`, `order_update`, etc.)  
 - Meta access token (from App B)  
 - Azure subscription  
 - Twilio account with 2 numbers  
@@ -136,13 +136,17 @@ Content-Type: application/json
 {
   "messaging_product": "whatsapp",
   "to": "@{variables('var1')}",
-  "type": "text",
-  "text": {
-    "body": "@{variables('var2')}"
+  "type": "template",
+  "template": {
+    "name": "@{variables('var2')}",
+    "language": {
+      "code": "en"
+    }
   }
 }
 ```
 
+> Note: All referenced templates must be pre-approved and in the `en` language.
 
 ---
 
@@ -151,10 +155,10 @@ Content-Type: application/json
 Send an SMS like:
 
 ```
-+11234567890 | Hello, this is a test message!
++11234567890 | welcome_offer
 ```
 
-✅ Logic App parses the input and sends the WhatsApp message.  
+✅ Logic App parses the input and sends the WhatsApp message using the `welcome_offer` template.  
 ✅ If the user replies, 3CX handles the conversation.
 
 ---
@@ -173,10 +177,10 @@ User ➡ SMS ➡ Twilio (Service Number)
 ## ✅ Key Points
 
 - Meta allows 1000 outbound conversations/day  
+- You can dynamically select any approved template using SMS input  
 - Logic Apps on the Consumption Plan are very cost-efficient  
 - Replies handled by 3CX (App A), messages initiated via API (App B)  
 - Two Twilio numbers to avoid webhook collisions  
-- Freeform text requires a valid WhatsApp session (24h rule)
 
 ---
 
