@@ -23,7 +23,7 @@ Use Meta’s WhatsApp Cloud API to proactively message up to **1000 users/day**.
 **This setup uses:**
 
 - **Two Facebook Developer Apps**
-  - App A: used by 3CX (handles replies)
+  - App A: used by 3CX (handles replies, regular setup by directly linking meta to 3cx - Don't use the Twilio Whatsapp API!!)
   - App B: used for outbound API calls (initiates messages)
 
 - **Two Twilio Numbers**
@@ -153,7 +153,7 @@ Content-Type: application/json
 Send an SMS like:
 
 ```
-+61483966663 | Hello, this is a test message!
++11234567890 | Hello, this is a test message!
 ```
 
 ✅ Logic App parses the input and sends the WhatsApp message.  
