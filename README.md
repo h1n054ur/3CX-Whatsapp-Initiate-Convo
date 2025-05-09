@@ -1,223 +1,190 @@
-📲 SMS-to-WhatsApp Relay
-A simple solution for sending WhatsApp messages by sending an SMS to a Twilio number.
-This uses:
+# 3CX-Whatsapp-Initiate-Convo
 
-Twilio (to receive SMS)
+A simple relay to send WhatsApp messages by sending SMS to a Twilio number.  
+It uses:
 
-Azure Logic Apps (for automation)
+- Twilio (to receive SMS)  
+- Azure Logic Apps (for automation)  
+- Meta WhatsApp Cloud API (to send WhatsApp messages)  
+- 3CX (for handling replies)
 
-Meta WhatsApp Cloud API (to send WhatsApp messages)
+---
 
-3CX (for handling replies)
+## 🧭 Overview
 
-🧭 Overview
-🔹 Problem:
-3CX’s native WhatsApp integration doesn’t allow initiating conversations — you can only reply to customers who message you first.
+### Problem
 
-🔹 Solution:
-Use the Meta WhatsApp Cloud API to send proactive messages (up to 1000 conversations/day) and let 3CX handle replies.
+3CX’s WhatsApp integration doesn’t allow initiating conversations — only replying to customers who message first.
 
-⚙️ How It Works
-Send an SMS with the customer’s WhatsApp number + message to a Twilio “service number.”
+### Solution
 
-An Azure Logic App parses the SMS.
+Use Meta’s WhatsApp Cloud API to proactively message up to **1000 users/day**. Once the customer replies, 3CX takes over as normal.
 
-The Logic App calls the Meta WhatsApp Cloud API to send the message.
+**This setup uses:**
 
-If the customer replies, 3CX receives the reply (via your existing integration).
+- **Two Facebook Developer Apps**
+  - App A: used by 3CX (handles replies)
+  - App B: used for outbound API calls (initiates messages)
 
-📋 Prerequisites
-Twilio account with 2 phone numbers:
+- **Two Twilio Numbers**
+  - Main business number (used by 3CX)
+  - Secondary service number (used to send SMS commands)
 
-Business number (used by 3CX)
+---
 
-Service number (used for sending SMS commands)
+## ⚙️ How It Works
 
-Azure account (Logic App - Consumption plan)
+1. Send an SMS to the **Twilio service number** in this format:
 
-2 Facebook Developer Apps:
+    ```
+    <whatsapp_number> | <message>
+    ```
 
-App 1: Integrated with 3CX (handles replies)
+2. Azure Logic App parses the message.
 
-App 2: Linked to the same WhatsApp number for outbound messaging
+3. Meta API sends a WhatsApp message to the number.
 
-Verified WhatsApp Business Account
+4. If they reply, 3CX receives it via its existing integration.
 
-Meta Phone Number ID & Access Token
+---
 
-Approved WhatsApp message template (for initiating conversations)
+## 📋 Prerequisites
 
-🚀 Setup Guide
-1️⃣ Twilio Setup
-Purchase/configure two Twilio numbers:
+- Verified WhatsApp Business Account  
+- Meta access token (from App B)  
+- Approved WhatsApp template  
+- Azure subscription  
+- Twilio account with 2 numbers  
+- Phone number ID linked to both apps (App A + B)
 
-Business number (existing, used by 3CX)
+---
 
-Service number (used for sending SMS commands)
+## 🚀 Setup Guide
 
-In the Twilio Console, configure the service number:
+### 1️⃣ Twilio
 
-Messaging → “A message comes in”
+- Buy a second Twilio number  
+- Under “Messaging” → “A message comes in”  
+  Set method to `POST` and point to your Logic App URL  
 
-Method: POST
+---
 
-URL: (your Logic App URL from Step 2)
+### 2️⃣ Azure Logic App (Consumption Plan)
 
-2️⃣ Azure Logic App Setup
-Create a new Logic App (Consumption plan).
+- Trigger: `When an HTTP request is received`  
+- Leave schema blank  
+- Add the following actions:
 
-Add the trigger:
+#### Filter Array
 
-vbnet
-Copy
-Edit
-When an HTTP request is received
-Leave the Request Body JSON Schema blank.
+**From:**
+```
+@triggerBody()?['$formdata']
+```
 
-Add the following actions:
+**Condition:**
+```
+item()?['key'] equals 'Body'
+```
 
-🔸 Filter Array (to extract SMS Body)
-css
-Copy
-Edit
-From: @triggerBody()?['$formdata']
-Condition:
+---
 
-css
-Copy
-Edit
-item()?['key'] is equal to Body
-🔸 Compose (to retrieve Body content)
-less
-Copy
-Edit
+#### Compose
+
+```
 first(body('Filter_array'))?['value']
-This returns:
+```
 
-diff
-Copy
-Edit
-+614xxxxxxxx | Your message here
-🔸 Compose (to split WhatsApp number & message)
-bash
-Copy
-Edit
+---
+
+#### Compose (Split)
+
+```
 split(outputs('Compose'), '|')
-🔸 Initialize Variables (optional for cleaner references)
-Name	Type	Value
-var1	String	trim(first(outputs('Compose_2')))
-var2	String	trim(last(outputs('Compose_2')))
+```
 
-🔸 HTTP (to send WhatsApp message)
-Method: POST
-URI:
+---
 
-bash
-Copy
-Edit
-https://graph.facebook.com/v22.0/YOUR_PHONE_NUMBER_ID/messages
-Headers:
+#### Initialize Variables (Optional)
 
-json
-Copy
-Edit
-{
-  "Authorization": "Bearer YOUR_ACCESS_TOKEN",
-  "Content-Type": "application/json"
-}
-Body:
+| Name | Type   | Value                                  |
+|------|--------|----------------------------------------|
+| var1 | String | `trim(first(outputs('Compose_2')))`    |
+| var2 | String | `trim(last(outputs('Compose_2')))`     |
 
-json
-Copy
-Edit
+---
+
+### 3️⃣ HTTP Action (Send to Meta API)
+
+**Method:** POST  
+**URI:**
+
+```
+https://graph.facebook.com/v22.0/<your_phone_number_id>/messages
+```
+
+**Headers:**
+
+```
+Authorization: Bearer <your_access_token>  
+Content-Type: application/json
+```
+
+**Body:**
+
+```json
 {
   "messaging_product": "whatsapp",
   "to": "@{variables('var1')}",
   "type": "template",
   "template": {
-    "name": "your_template_name",
+    "name": "hello_world",
     "language": {
       "code": "en_US"
     }
   }
 }
-🔸 Notes:
-
-Replace YOUR_PHONE_NUMBER_ID with your Meta phone number ID.
-
-Use your approved template name (e.g., hello_world).
-
-Your access token must be generated from the Meta app linked to your WhatsApp number.
-
-3️⃣ Test the Workflow
-Send an SMS from your business Twilio number to your service Twilio number in this format:
-
-kotlin
-Copy
-Edit
-+614xxxxxxxx | Hello, this is a test message!
-✅ The Logic App will:
-
-Parse the number/message.
-
-Send the WhatsApp message via Meta’s API.
-
-If the customer replies, 3CX will handle the conversation as normal.
-
-🔍 How It Looks Behind the Scenes
-scss
-Copy
-Edit
-Business Number (SMS) ➡️ Service Twilio Number ➡️ Logic App ➡️ Meta API ➡️ Customer (WhatsApp)
-                                  ⬆️                                          ⬇️
-                                3CX ⬅️ (Replies handled by existing integration)
-✅ Key Points & Considerations
-Meta allows 1000 outbound conversations/day (can be increased with higher tiers).
-
-Logic Apps on the Consumption Plan are very cost-effective (pay-per-run).
-
-Two Meta apps used:
-
-App 1: connected to 3CX (replies).
-
-App 2: for sending outbound messages via API.
-
-Two Twilio numbers used:
-
-Business number: customer-facing / 3CX integration.
-
-Service number: for triggering Logic App with SMS.
-
-📚 Resources
-Twilio Console
-
-Azure Logic Apps
-
-Meta for Developers
-
-WhatsApp Business API Docs
-
-Let me know if you need help setting up message templates, error handling, or logging!
-
-yaml
-Copy
-Edit
+```
 
 ---
 
-### ✅ How to Use:
-1. Copy-paste this into your `README.md`.
-2. Replace placeholders (`YOUR_PHONE_NUMBER_ID`, `YOUR_ACCESS_TOKEN`, etc.) with your actual values.
-3. Add code blocks in GitHub rendering automatically.
+### 4️⃣ Test the Flow
 
-Let me know if you need further adjustments!
+Send an SMS like:
 
-2/2
+```
++61483966663 | Hello, this is a test message!
+```
 
+✅ Logic App parses the input and sends the WhatsApp message.  
+✅ If the user replies, 3CX handles the conversation.
 
+---
 
+## 🔍 Architecture
 
+```
+User ➡ SMS ➡ Twilio (Service Number)
+           ➡ Azure Logic App ➡ Meta API ➡ WhatsApp Message
+                                                ⬇
+                                               3CX
+```
 
+---
 
+## ✅ Key Points
 
+- Meta allows 1000 outbound conversations/day  
+- Logic Apps on the Consumption Plan are very cost-efficient  
+- Replies handled by 3CX (App A), messages initiated via API (App B)  
+- Two Twilio numbers to avoid webhook collisions
 
+---
+
+## 📚 Resources
+
+- https://developers.facebook.com/docs/whatsapp
+- https://portal.azure.com/
+- https://console.twilio.com/
+
+---
