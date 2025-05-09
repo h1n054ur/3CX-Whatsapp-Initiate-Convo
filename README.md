@@ -50,7 +50,8 @@ Use Meta’s WhatsApp Cloud API to proactively message up to **1000 users/day**.
 
 ## 📋 Prerequisites
 
-- Verified WhatsApp Business Account  
+- Verified WhatsApp Business Account
+- Approved WhatsApp template  
 - Meta access token (from App B)  
 - Azure subscription  
 - Twilio account with 2 numbers  
