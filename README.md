@@ -23,7 +23,7 @@ Use Meta’s WhatsApp Cloud API to proactively message up to **1000 users/day**.
 **This setup uses:**
 
 - **Two Facebook Developer Apps**
-  - App A: used by 3CX (handles replies, regular setup by directly linking meta to 3cx - Don't use the Twilio Whatsapp API!!)
+  - App A: used by 3CX (handles replies, regular setup by directly linking Meta to 3CX — _Don't use the Twilio WhatsApp API!_)
   - App B: used for outbound API calls (initiates messages)
 
 - **Two Twilio Numbers**
@@ -52,7 +52,6 @@ Use Meta’s WhatsApp Cloud API to proactively message up to **1000 users/day**.
 
 - Verified WhatsApp Business Account  
 - Meta access token (from App B)  
-- Approved WhatsApp template  
 - Azure subscription  
 - Twilio account with 2 numbers  
 - Phone number ID linked to both apps (App A + B)
@@ -89,7 +88,7 @@ item()?['key'] equals 'Body'
 
 ---
 
-#### Compose
+#### Compose (Extract Message Body)
 
 ```
 first(body('Filter_array'))?['value']
@@ -97,7 +96,7 @@ first(body('Filter_array'))?['value']
 
 ---
 
-#### Compose (Split)
+#### Compose (Split Into Parts)
 
 ```
 split(outputs('Compose'), '|')
@@ -105,12 +104,12 @@ split(outputs('Compose'), '|')
 
 ---
 
-#### Initialize Variables (Optional)
+#### Initialize Variables
 
-| Name | Type   | Value                                  |
-|------|--------|----------------------------------------|
-| var1 | String | `trim(first(outputs('Compose_2')))`    |
-| var2 | String | `trim(last(outputs('Compose_2')))`     |
+| Name  | Type   | Value                                  |
+|-------|--------|----------------------------------------|
+| var1  | String | `trim(first(outputs('Compose_2')))`    |
+| var2  | String | `trim(last(outputs('Compose_2')))`     |
 
 ---
 
@@ -136,15 +135,13 @@ Content-Type: application/json
 {
   "messaging_product": "whatsapp",
   "to": "@{variables('var1')}",
-  "type": "template",
-  "template": {
-    "name": "hello_world",
-    "language": {
-      "code": "en_US"
-    }
+  "type": "text",
+  "text": {
+    "body": "@{variables('var2')}"
   }
 }
 ```
+
 
 ---
 
@@ -177,14 +174,15 @@ User ➡ SMS ➡ Twilio (Service Number)
 - Meta allows 1000 outbound conversations/day  
 - Logic Apps on the Consumption Plan are very cost-efficient  
 - Replies handled by 3CX (App A), messages initiated via API (App B)  
-- Two Twilio numbers to avoid webhook collisions
+- Two Twilio numbers to avoid webhook collisions  
+- Freeform text requires a valid WhatsApp session (24h rule)
 
 ---
 
 ## 📚 Resources
 
-- https://developers.facebook.com/docs/whatsapp
-- https://portal.azure.com/
+- https://developers.facebook.com/docs/whatsapp  
+- https://portal.azure.com/  
 - https://console.twilio.com/
 
 ---
